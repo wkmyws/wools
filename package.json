@@ -1,0 +1,19 @@
+{
+  "name": "wools",
+  "version": "0.0.1",
+  "description": "base tool...",
+  "main": "baseTool.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wkmyws/wools.git"
+  },
+  "author": "syy",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wkmyws/wools/issues"
+  },
+  "homepage": "https://github.com/wkmyws/wools#readme"
+}
