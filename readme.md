@@ -1,3 +1,5 @@
+### 控制台输入输出
+
 #### print( color , text )
 
 向控制台输出一串字符串(默认不换行)
@@ -45,6 +47,8 @@
 
 ---
 
+### 文件操作
+
 #### file.list( dir, deepth )
 
 遍历path目录
@@ -80,7 +84,7 @@
   }
   ```
 
-  <font color="red">注意，extName默认被转为小写字母格式</font>
+  ~~<font color="red">注意，extName默认被转为小写字母格式</font>~~
 
 + 示例
 
@@ -110,7 +114,7 @@
 
 + filePath: 文件路径
 + rename: 
-  + ( filePath ) => newName
+  + ( fileName, filePath ) => newName
   + string: newName
 + return: 改名后的文件路径
 
@@ -198,6 +202,50 @@
   ```javascript
   await execSync("echo | npm --version")
   ```
+
+---
+
+#### file.encrypt ( file, pwd, newFile=file )
+
+用aes-192-cbc加密
+
++ data: 原始数据
+
++ key: 密码
+
++ newFile: 加密后的文件路径，默认覆盖原文件
+
++ 示例
+
+  ```javascript
+  await file.encrypt("1.txt","password")
+  ```
+
+---
+
+#### file.decrypt ( file, pwd, newFile=file )
+
+对应`file.encrypt`的解密函数
+
++ 示例
+
+  ```
+  await file.decrypt("1.txt","password")
+  ```
+
+---
+
+### 字符串操作
+
+#### encrypt(str, pwd)
+
+字符串加密
+
+---
+
+#### decrypt(str, pwd)
+
+字符串解密
 
 ---
 

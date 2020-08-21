@@ -3,28 +3,31 @@ const fs = require('fs');
 const path = require('path');
 const process = require("process")
 const { exec } = require('child_process');
+const crypto = require('crypto');
 const { resolve } = require('path');
-const { stdout, stderr } = require('process');
 
+//私有全局变量
+let __config = {
+    //控制台模块变量
+    console_color: {
+        "red": "\x1b[31m",
+        "green": "\x1b[32m",
+        "blue": "\x1b[34m",
+        "white": "\x1b[37m",
+        "black": "\x1b[30m",
+        "yellow": "\x1B[33m",
+        "reset": "\x1b[0m",
+    },
+}
 
-//控制台模块
-let console_color = {
-    "red": "\x1b[31m",
-    "green": "\x1b[32m",
-    "blue": "\x1b[34m",
-    "white": "\x1b[37m",
-    "black": "\x1b[30m",
-    "yellow": "\x1B[33m",
-    "reset": "\x1b[0m",
-};
 function print(color, text) {//print
     if (!color) {//cls
         process.stdout.write(process.platform === 'win32' ? '\x1B[2J\x1B[0f' : '\x1B[2J\x1B[3J\x1B[H');
     } else if (!text) {
         print("reset", color)
     } else {
-        process.stdout.write((console_color[color] || console_color["reset"]) + text + console_color["reset"])
-        //console.log('%s%s\x1b[0m',console_color[color]||console_color["reset"],text);
+        process.stdout.write((__config.console_color[color] || __config.console_color["reset"]) + text + __config.console_color["reset"])
+        //console.log('%s%s\x1b[0m',__config.console_color[color]||__config.console_color["reset"],text);
     }
     return text
 }
@@ -60,6 +63,8 @@ const file = {
     read: file_read,
     write: file_write,
     json: file_json,
+    encrypt: file_encrypt,
+    decrypt: file_decrypt,
 }
 
 function file_list(dir, deepth = -1) {
@@ -84,7 +89,7 @@ function file_info(filePath) {
     return {
         size: info.size,
         baseName: path.basename(filePath),
-        extName: path.extname(filePath).toLowerCase(),
+        extName: path.extname(filePath),//.toLowerCase(),
         dirName: path.dirname(filePath),
         "访问时间": info.atime,
         "修改时间": info.mtime,
@@ -93,8 +98,13 @@ function file_info(filePath) {
 }
 
 
+/**
+ * @param {*} filePath
+ * @param {function} rename 1.func: (baseName,filePath)=>newName    2.string: newName
+ * @return {string} newName 
+ */
 function file_rename(filePath, rename) {
-    let newBase = typeof (rename) == 'function' ? rename(filePath) : rename
+    let newBase = typeof (rename) == 'function' ? rename(path.basename(filePath),filePath) : rename
     newBase = path.join(path.dirname(filePath), newBase)
     fs.renameSync(filePath, newBase)
     return newBase
@@ -145,18 +155,97 @@ function file_json(file) {
     }
 }
 
+async function file_encrypt(file, pwd, newFile = file) {
+    let tmpFile = null
+    if (newFile === file) {
+        tmpFile = file
+        do { newFile += "0" } while (fs.existsSync(newFile))
+
+    }
+    await new Promise((resolve, reject) => {
+        const cipher = crypto.createCipheriv(
+            'aes-192-cbc',
+            crypto.scryptSync(pwd, "salt", 24),
+            Buffer.alloc(16, 0)
+        )
+        const input = fs.createReadStream(file)
+        const output = fs.createWriteStream(newFile)
+        input
+            .pipe(cipher)
+            .pipe(output)
+            .on('finish', () => {
+                if (tmpFile) {
+                    fs.unlinkSync(file)
+                    fs.renameSync(newFile, file)
+                }
+                return resolve()
+            })
+    })
+}
+
+async function file_decrypt(file, pwd, newFile = file) {
+    let tmpFile = null
+    if (newFile === file) {
+        tmpFile = file
+        do { newFile += "0" } while (fs.existsSync(newFile))
+
+    }
+    await new Promise((resolve, reject) => {
+        const decipher = crypto.createDecipheriv(
+            'aes-192-cbc',
+            crypto.scryptSync(pwd, "salt", 24),
+            Buffer.alloc(16, 0)
+        )
+        const input = fs.createReadStream(file)
+        const output = fs.createWriteStream(newFile)
+        input
+            .pipe(decipher)
+            .pipe(output)
+            .on('finish', () => {
+                if (tmpFile) {
+                    fs.unlinkSync(file)
+                    fs.renameSync(newFile, file)
+                }
+                return resolve()
+            })
+    })
+}
+
 // execSync
-async function execSync(cmd){
-    let res = await new Promise((resolve,reject)=>{
-        exec(cmd,{ encoding: 'binary' },async(error,stdout,stderr)=>{
-            if(error){
+async function execSync(cmd) {
+    let res = await new Promise((resolve, reject) => {
+        exec(cmd, { encoding: 'binary' }, async (error, stdout, stderr) => {
+            if (error) {
                 return reject(error)
             }
-            console.log({stdout:stdout,stderr:stderr})
-            return resolve({stdout:stdout,stderr:stderr})
+            console.log({ stdout: stdout, stderr: stderr })
+            return resolve({ stdout: stdout, stderr: stderr })
         })
     })
 }
+
+function encrypt(str, pwd) {
+    const cipher = crypto.createCipheriv(
+        'aes-192-cbc',
+        crypto.scryptSync(pwd, "salt", 24),
+        Buffer.alloc(16, 0)
+    )
+    let encrypted = cipher.update(str, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted
+}
+
+function decrypt(encrypted, pwd) {
+    const decipher = crypto.createDecipheriv(
+        'aes-192-cbc',
+        crypto.scryptSync(pwd, "salt", 24),
+        Buffer.alloc(16, 0)
+    )
+    let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+}
+
 
 
 module.exports = {
@@ -164,4 +253,6 @@ module.exports = {
     readLine,
     file,
     execSync,
+    encrypt,
+    decrypt,
 }
