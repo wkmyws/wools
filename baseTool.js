@@ -218,7 +218,6 @@ async function execSync(cmd) {
             if (error) {
                 return reject(error)
             }
-            console.log({ stdout: stdout, stderr: stderr })
             return resolve({ stdout: stdout, stderr: stderr })
         })
     })
